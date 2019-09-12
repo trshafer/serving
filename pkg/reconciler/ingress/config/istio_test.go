@@ -124,6 +124,26 @@ func TestGatewayConfiguration(t *testing.T) {
 			},
 		},
 	}, {
+		name:    "namespaced gateway configuration with valid url",
+		wantErr: false,
+		wantIstio: &Istio{
+			IngressGateways: []Gateway{{
+				Namespace:  "other-namespace",
+				Name:       "preconfigured-gateway",
+				ServiceURL: "istio-ingressfreeway.istio-system.svc.cluster.local",
+			}},
+			LocalGateways: defaultLocalGateways(),
+		},
+		config: &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: system.Namespace(),
+				Name:      IstioConfigName,
+			},
+			Data: map[string]string{
+				"gateway.other-namespace.preconfigured-gateway": "istio-ingressfreeway.istio-system.svc.cluster.local",
+			},
+		},
+	}, {
 		name:    "local gateway configuration with valid url",
 		wantErr: false,
 		wantIstio: &Istio{

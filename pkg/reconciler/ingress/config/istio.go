@@ -104,15 +104,25 @@ func parseGateways(configMap *corev1.ConfigMap, prefix string) ([]Gateway, error
 		urls[gatewayName] = serviceURL
 	}
 	sort.Strings(gatewayNames)
+	return makeGateways(gatewayNames, urls), nil
+}
+
+func makeGateways(gatewayNames []string, urls map[string]string) []Gateway {
+	namespace := system.Namespace()
 	gateways := make([]Gateway, len(gatewayNames))
 	for i, gatewayName := range gatewayNames {
+		name := gatewayName
+		gatewayParts := strings.Split(gatewayName, ".")
+		if len(gatewayParts) == 2 {
+			namespace, name = gatewayParts[0], gatewayParts[1]
+		}
 		gateways[i] = Gateway{
-			Namespace:  system.Namespace(),
-			Name:       gatewayName,
+			Namespace:  namespace,
+			Name:       name,
 			ServiceURL: urls[gatewayName],
 		}
 	}
-	return gateways, nil
+	return gateways
 }
 
 // NewIstioFromConfigMap creates an Istio config from the supplied ConfigMap
