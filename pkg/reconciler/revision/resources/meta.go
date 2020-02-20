@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/serving/pkg/apis/serving"
 	v1 "knative.dev/serving/pkg/apis/serving/v1"
+	"knative.dev/serving/pkg/reconciler/ingress"
 	"knative.dev/serving/pkg/resources"
 )
 
@@ -30,6 +31,13 @@ func makeLabels(revision *v1.Revision) map[string]string {
 		// doesn't trigger deployment updates.
 		return k == serving.RouteLabelKey
 	})
+
+	for key, value := range labels {
+		if value == ingress.ReplaceWithRevisionName {
+			labels[key] = revision.Name
+		}
+	}
+
 	labels = resources.UnionMaps(labels, map[string]string{
 		serving.RevisionLabelKey: revision.Name,
 		serving.RevisionUID:      string(revision.UID),

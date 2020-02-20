@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 
+	// appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
@@ -67,6 +68,8 @@ var types = map[schema.GroupVersionKind]resourcesemantics.GenericCRD{
 	v1.SchemeGroupVersion.WithKind("Configuration"):       &v1.Configuration{},
 	v1.SchemeGroupVersion.WithKind("Route"):               &v1.Route{},
 	v1.SchemeGroupVersion.WithKind("Service"):             &v1.Service{},
+
+	// appsv1.SchemeGroupVersion.WithKind("Deployment"): &appsv1.Deployment{},
 
 	autoscalingv1alpha1.SchemeGroupVersion.WithKind("PodAutoscaler"): &autoscalingv1alpha1.PodAutoscaler{},
 	autoscalingv1alpha1.SchemeGroupVersion.WithKind("Metric"):        &autoscalingv1alpha1.Metric{},

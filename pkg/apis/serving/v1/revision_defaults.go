@@ -28,6 +28,11 @@ import (
 // SetDefaults implements apis.Defaultable
 func (r *Revision) SetDefaults(ctx context.Context) {
 	r.Spec.SetDefaults(apis.WithinSpec(ctx))
+
+	if r.GetAnnotations()["networking.knative.dev/ingress.class"] == "istio.ingress.networking.knative.dev" {
+		r.ObjectMeta.Labels["service.istio.io/canonical-name"] = r.GetLabels()["serving.knative.dev/configuration"]
+		r.ObjectMeta.Labels["service.istio.io/canonical-revision"] = r.Name
+	}
 }
 
 // SetDefaults implements apis.Defaultable

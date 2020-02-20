@@ -19,10 +19,15 @@ package service
 import (
 	"context"
 
+	configmapinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap"
+	"knative.dev/pkg/logging"
 	configurationinformer "knative.dev/serving/pkg/client/injection/informers/serving/v1alpha1/configuration"
 	revisioninformer "knative.dev/serving/pkg/client/injection/informers/serving/v1alpha1/revision"
 	routeinformer "knative.dev/serving/pkg/client/injection/informers/serving/v1alpha1/route"
 	kserviceinformer "knative.dev/serving/pkg/client/injection/informers/serving/v1alpha1/service"
+	servicereconciler "knative.dev/serving/pkg/client/injection/reconciler/serving/v1alpha1/service"
+	"knative.dev/serving/pkg/network"
+	"knative.dev/serving/pkg/reconciler/service/config"
 
 	"k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/configmap"
@@ -45,6 +50,7 @@ func NewController(
 	routeInformer := routeinformer.Get(ctx)
 	configurationInformer := configurationinformer.Get(ctx)
 	revisionInformer := revisioninformer.Get(ctx)
+	configMapInformer := configmapinformer.Get(ctx)
 
 	c := &Reconciler{
 		Base:                reconciler.NewBase(ctx, controllerAgentName, cmw),
@@ -52,8 +58,21 @@ func NewController(
 		configurationLister: configurationInformer.Lister(),
 		revisionLister:      revisionInformer.Lister(),
 		routeLister:         routeInformer.Lister(),
+		configMapLister:     configMapInformer.Lister(),
 	}
-	impl := controller.NewImpl(c, c.Logger, ReconcilerName)
+	// impl := controller.NewImpl(c, c.Logger, ReconcilerName)
+
+	impl := servicereconciler.NewImpl(ctx, c, func(impl *controller.Impl) controller.Options {
+		configsToResync := []interface{}{
+			&network.Config{},
+		}
+		resync := configmap.TypeFilter(configsToResync...)(func(string, interface{}) {
+			impl.GlobalResync(serviceInformer.Informer())
+		})
+		configStore := config.NewStore(logging.WithLogger(ctx, c.Logger.Named("config-store")), resync)
+		configStore.WatchConfigs(cmw)
+		return controller.Options{ConfigStore: configStore}
+	})
 
 	c.Logger.Info("Setting up event handlers")
 	serviceInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
@@ -67,6 +86,11 @@ func NewController(
 		FilterFunc: controller.Filter(v1alpha1.SchemeGroupVersion.WithKind("Service")),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
+
+	// configMapInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	// 	FilterFunc: controller.FilterGroupKind(v1.Kind("Revision")),
+	// 	Handler:    controller.HandleAll(impl.EnqueueControllerOf),
+	// })
 
 	return impl
 }
